@@ -1,28 +1,24 @@
 const express = require("express");
-const Joi = require("joi");
-const books = require("../../models/books");
+
+const { Book, addSchema, updateSchema } = require("../../models/book");
 const { HttpError } = require("../../helpers");
+const { isValidId } = require("../../middlewares/isValidId");
 
 const router = express.Router();
 
-const addSchema = Joi.object({
-  title: Joi.string().required(),
-  author: Joi.string().required(),
-});
-
 router.get("/", async (req, res, next) => {
   try {
-    const result = await books.getAll();
+    const result = await Book.find();
     res.json(result);
   } catch (error) {
     next(error);
   }
 });
 
-router.get("/:id", async (req, res, next) => {
+router.get("/:id", isValidId, async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await books.getById(id);
+    const result = await Book.findById(id);
     if (!result) {
       throw HttpError(404, "Not found");
     }
@@ -38,7 +34,7 @@ router.post("/", async (req, res, next) => {
     if (error) {
       throw HttpError(400, error.message);
     }
-    const result = await books.add(req.body);
+    const result = await Book.create(req.body);
     res.status(201).json(result);
   } catch (error) {
     next(error);
@@ -48,7 +44,7 @@ router.post("/", async (req, res, next) => {
 router.delete("/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await books.deleteById(id);
+    const result = await Book.findByIdAndRemove(id);
     if (!result) {
       throw HttpError(404, "Not found");
     }
@@ -58,14 +54,31 @@ router.delete("/:id", async (req, res, next) => {
   }
 });
 
-router.put("/:id", async (req, res, next) => {
+router.put("/:id", isValidId, async (req, res, next) => {
   try {
     const { error } = addSchema.validate(req.body);
     if (error) {
       throw HttpError(400, error.message);
     }
     const { id } = req.params;
-    const result = await books.updateById(id, req.body);
+    const result = await Book.findByIdAndUpdate(id, req.body, { new: true });
+    if (!result) {
+      throw HttpError(404, "Not found");
+    }
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/:id/favorite", isValidId, async (req, res, next) => {
+  try {
+    const { error } = updateSchema.validate(req.body);
+    if (error) {
+      throw HttpError(400, error.message);
+    }
+    const { id } = req.params;
+    const result = await Book.findByIdAndUpdate(id, req.body, { new: true });
     if (!result) {
       throw HttpError(404, "Not found");
     }
